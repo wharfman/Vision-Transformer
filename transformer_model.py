@@ -41,16 +41,16 @@ class AttentionHead(nn.Module):
 
         self.dropout = nn.Dropout(p=config.p_dropout)
 
-        def forward(self, x):
-            b, t, d = x.shape
-            q = self.query(x)
-            k = self.key(x)
-            v = self.value(x)
+    def forward(self, x):
+        b, t, d = x.shape
+        q = self.query(x)
+        k = self.key(x)
+        v = self.value(x)
 
-            att = q @ k.transpose(1, 2) * (self.head_size**-0.5)
-            att = F.softmax(att, dim=-1)
-            att = self.dropout(att)
-            return att @ v
+        att = q @ k.transpose(1, 2) * (self.head_size**-0.5)
+        att = F.softmax(att, dim=-1)
+        att = self.dropout(att)
+        return att @ v
         
 class MultiHeadAttention(nn.Module):
 
@@ -84,7 +84,7 @@ class MyLayerNorm(nn.Module):
         return x_hat
     
 class FeedForward(nn.Module):
-
+    
     def __init__(self, config):
         super().__init__()
         self.net = nn.Sequential(
@@ -94,9 +94,9 @@ class FeedForward(nn.Module):
             nn.Dropout(p=config.p_dropout),
         )
 
-    def forwad(self, x):
+    def forward(self, x):
         return self.net(x)
-    
+
 class TransformerBlock(nn.Module):
     def __init__(self, config):
         super().__init__()
