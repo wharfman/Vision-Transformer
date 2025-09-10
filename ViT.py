@@ -119,7 +119,7 @@ def train_test_model(config):
                 train_loss += loss.item() * inputs.size(0)
                 _, predicted = torch.max(logits, 1)
                 train_correct += (predicted == labels).sum().item()
-                train_total = labels.size(0)
+                train_total += labels.size(0)
                 pbar.set_postfix(loss=loss.item())
         train_epoch_loss = train_loss / train_total
         train_epoch_acc = train_correct / train_total
@@ -138,7 +138,7 @@ def train_test_model(config):
                 val_loss += loss.item() * inputs.size(0)
                 _, predicted = torch.max(logits, 1)
                 val_correct += (predicted == labels).sum().item()
-                val_total = labels.size(0)
+                val_total += labels.size(0)
                 pbar.set_postfix(loss=loss.item())
         val_epoch_loss = val_loss / val_total
         val_epoch_acc = val_correct / val_total
