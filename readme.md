@@ -2,13 +2,6 @@
 
 A PyTorch implementation of Vision Transformer for image classification on CIFAR-10, achieving ~77.5% validation accuracy after 300 epochs of training.
 
-### Model Components
-
-- **Patch Embedding**: Divides 32x32 images into 4x4 patches, creating 64 tokens per image
-- **Positional Encoding**: Learnable positional embeddings for patch sequences
-- **Transformer Blocks**: 3 layers of multi-head self-attention and feed-forward networks
-- **Classification Head**: Linear layer for 10-class CIFAR-10 classification
-
 ### Key Parameters
 
 | Parameter | Value | Description |
