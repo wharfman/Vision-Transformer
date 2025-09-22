@@ -9,8 +9,13 @@ from torch.utils.data import DataLoader, random_split
 from torchvision.datasets import MNIST, CIFAR10
 from dataclasses import dataclass
 
+# Set the device and seed
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-torch.manual_seed(1337)
+seed = 1337
+torch.manual_seed(seed)
+print(f"Device {device}")
+print(f"Seed {seed}")
+
 
 logging.basicConfig(
     level = logging.INFO,
@@ -24,7 +29,7 @@ logging.basicConfig(
 
 @dataclass
 class Config:
-    batch_size = 16
+    batch_size = 128
     image_size = 32 
     patch_size = 4 # tokens of 4x4 pixels
     normalize_shape = (0.5, 0.5, 0.5)
@@ -35,8 +40,8 @@ class Config:
     
     n_embd = 32
     n_channels = 3
-    n_heads = 2
-    n_blocks = 2
+    n_heads = 8
+    n_blocks = 3
     n_epochs = 300
     n_classes = 10
     
@@ -54,25 +59,28 @@ class PatchEmbedding(nn.Module):
         b, c, h, w = x.shape
         p = self.config.patch_size
 
-        x = x.unfold(2, p, p) # (b, c, h/p, p, w)
-        x = x.unfold(3, p, p) # (b, c, h/p, w/p, p, p)
-        x = x.permute(0, 2, 3, 1, 4, 5).contiguous() # (b, h/p, w/p, c, p, p)
-        x = x.view(b, -1, c*p*p) # (b, n, c*p*p) where n=(h/p) * (w/p)
-        x = self.proj(x) # (b, n, n_embd), each batch is n patches of n_embd dimensions
-
+        # Create patches: (b, c, h/p, p, w) -=> (b, c, h/p, w/p, p, p)
+        x = x.unfold(2, p, p).unfold(3, p, p) 
+        # Rearrange so that patches are the sequence dimension: (b, h/p, w/p, c, p, p)
+        x = x.permute(0, 2, 3, 1, 4, 5).contiguous() 
+        # Flatten the patches: (b, n, c*p*p) where n=(h/p) * (w/p)
+        x = x.view(b, -1, c*p*p) 
+        # Project patches to the embedding dimension: (b, n, n_embd)
+        x = self.proj(x) 
         return x
     
 class ViT(nn.Module):
 
     def __init__(self, config):
         super().__init__()
-        self.patch_embedding = PatchEmbedding(config)
         n = (config.image_size // config.patch_size) ** 2
         d = config.n_embd
 
+        self.patch_embedding = PatchEmbedding(config)
         self.cls_token = nn.Parameter(torch.randn(1, 1, d) * 0.02)
         self.pos_emb = nn.Parameter(torch.randn(1, n+1, d) * 0.02)
 
+        # Create transformer block sequences
         self.transformer_blocks = nn.Sequential(
             *[tm.TransformerBlock(config) for _ in range(config.n_blocks)]
         )
@@ -84,7 +92,7 @@ class ViT(nn.Module):
         patches = self.patch_embedding(x) # (b, n, d)
         cls_tokens = self.cls_token.expand(b, -1, -1)
         x = torch.cat([cls_tokens, patches], dim=1) # (b, n+1, d)
-        x = x + self.pos_emb[:, :x.size(1):, :] # Add positional embedding (b, n+1, d)
+        x = x + self.pos_emb[:, :x.size(1), :] # Add positional embedding (b, n+1, d)
 
         x = self.transformer_blocks(x)
         x = self.ln(x[:, 0, :])
@@ -94,11 +102,14 @@ class ViT(nn.Module):
 
 def train_test_model(config):
     dataset = CIFAR10(
-        root=".",
+        root="../data/",
         download=True,
         transform=T.Compose([
             T.Resize((config.image_size, config.image_size)), # Resize dataset image to config parameter (32x32)
-            T.ToTensor(),
+            T.RandomCrop(config.image_size, padding=4),
+            T.RandomHorizontalFlip(),
+            T.RandomRotation(15), # Rotate image by 15 degrees
+            T.ToTensor(), # Tensor in range 0,1
             T.Normalize(config.normalize_shape, config.normalize_shape), # Standardize pixels from 0,1 to -1,1
         ])
     )
@@ -129,6 +140,7 @@ def train_test_model(config):
             logits = model(inputs)
             loss = criterion(logits, labels)
             loss.backward()
+            # Clip gradient to prevent exploding gradients
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
 
