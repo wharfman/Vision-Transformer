@@ -22,6 +22,8 @@ A PyTorch implementation of Vision Transformer for image classification on CIFAR
 
 The model was trained for 300 epochs with the following results:
 
+<img width="4470" height="1848" alt="training_metrics" src="https://github.com/user-attachments/assets/3d216aa5-672f-4121-b307-05d412ef689d" />
+
 - **Final Training Accuracy**: 82.66%
 - **Final Validation Accuracy**: 77.46%
 - **Training Loss**: Converged from 1.96 to 0.49
